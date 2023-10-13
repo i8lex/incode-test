@@ -9,7 +9,6 @@ import {
 import { JwtAuthGuard } from 'src/api/auth/guards/jwt-auth.guard';
 import { User } from './user.entity';
 import { ChangeBossDTO } from './dto/changeBoss.dto';
-import { UserLoginResponseDTO } from '../auth/dto/userLoginResponse.dto';
 
 @Controller('users')
 @ApiTags('Users')
