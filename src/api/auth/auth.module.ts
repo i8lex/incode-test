@@ -1,5 +1,3 @@
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/api/user/user.schema';
 import { UserModule } from '../user/user.module';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,13 +8,15 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UserService } from '../user/user.service';
 import { AuthController } from './auth.controller';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '../user/user.entity';
 
 @Module({
   imports: [
-    UserModule,
+    forwardRef(() => UserModule),
+    TypeOrmModule.forFeature([User]),
     PassportModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

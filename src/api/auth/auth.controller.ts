@@ -12,7 +12,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/register')
-  @ApiOperation({ summary: 'Register a new admin' })
+  @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
     description: 'The user has been successfully registered.',

@@ -15,9 +15,4 @@ export class RegisterUserDTO {
       'Password must contain at least one digit, one lowercase and one uppercase letter',
   })
   readonly password: string;
-
-  @ApiProperty({ example: 'civil446', description: 'User nickname' })
-  @IsNotEmpty()
-  @Length(2, 30, { message: 'Name must be between 2 and 30 characters' })
-  readonly username: string;
 }

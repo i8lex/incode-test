@@ -1,8 +1,8 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
-import { User, UserSchema } from './user.schema';
+import { User } from './user.entity';
 import { UserService } from './user.service';
-import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -18,8 +18,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
-    ConfigModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    TypeOrmModule.forFeature([User]),
   ],
   providers: [UserService],
   controllers: [UserController],

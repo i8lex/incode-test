@@ -15,9 +15,4 @@ export class UserRegisterResponseDTO {
     example: 'User successfully registered',
   })
   message: string;
-  @ApiProperty({
-    description: 'Registered username.',
-    example: 'Root1234',
-  })
-  username: string;
 }

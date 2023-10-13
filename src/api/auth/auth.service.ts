@@ -4,7 +4,6 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
-import { User } from '../user/user.schema';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from 'src/api/user/user.service';
@@ -12,32 +11,31 @@ import { LoginUserDTO } from './dto/login.dto';
 import { UserLoginResponseDTO } from './dto/userLoginResponse.dto';
 import { RegisterUserDTO } from './dto/register.dto';
 import { UserRegisterResponseDTO } from './dto/userRegisterResponse.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { Repository, EntityManager } from 'typeorm';
+import { User } from '../user/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager,
   ) {}
   async register(
     cred: RegisterUserDTO,
     userId,
   ): Promise<UserRegisterResponseDTO> {
-    const { username, email, password } = cred;
+    const { email, password } = cred;
     if (!password) {
       throw new BadRequestException('Password is required');
     }
-    const users = await this.userModel.find().exec();
-
+    const users = await this.userRepository.find();
     const existingEmail = await this.userService.findUserByEmail(email);
-    const existingUsername = await this.userService.findUserByName(username);
 
-    if (existingUsername) {
-      throw new BadRequestException('User with this name already exists');
-    }
     if (existingEmail) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -46,30 +44,34 @@ export class AuthService {
         'Password must contain at least one digit, one lowercase and one uppercase letter, and be at least 8 characters long',
       );
     }
-
+    const admin = await this.userRepository.findOne({
+      where: { role: 'admin' },
+    });
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new this.userModel({
+    const user: User = {
+      id: null,
+      subordinates: null,
+      supervisor: userId ? userId : users.length === 0 ? null : admin.id,
       role: users.length === 0 ? 'admin' : 'user',
-      username,
       email,
       password: hashedPassword,
-    });
-    await newUser.save();
+    };
+    await this.userService.create(user);
+
     if (userId) {
-      await this.userModel.findOneAndUpdate(
-        { _id: userId },
-        { role: 'boss', $push: { subordinates: newUser._id } },
+      await this.entityManager.query(
+        'UPDATE users SET role = $1 WHERE id = $2',
+        ['boss', userId],
       );
     } else if (!userId && users.length > 0) {
-      await this.userModel.findOneAndUpdate(
-        { role: 'admin' },
-        { $push: { subordinates: newUser._id } },
+      await this.entityManager.query(
+        'UPDATE users SET supervisor = $1 WHERE supervisor IN (SELECT id FROM users WHERE role = $2)',
+        [admin.id, 'admin'],
       );
     }
     return {
-      username,
-      email: newUser.email,
+      email: user.email,
       message: 'User successfully registered',
     };
   }
@@ -81,12 +83,9 @@ export class AuthService {
         HttpStatus.UNAUTHORIZED,
       );
     } else {
-      const token = this.jwtService.sign(
-        { id: user._id },
-        { expiresIn: '24h' },
-      );
+      const token = this.jwtService.sign({ id: user.id }, { expiresIn: '24h' });
       return {
-        _id: user._id,
+        id: user.id,
         email: user.email,
         token: token,
       };
